@@ -1,0 +1,133 @@
+/*
+Ultrasonic Distance Sensor(HC-SR04) with a Neopixel 12 as an actuator
+code implemented by Yufan Kang
+Student ID: 218393897
+*/
+
+#include <Adafruit_NeoPixel.h>
+
+//define ultrasonic distance sensor's pin numbers
+#define TRIG_PIN 12
+#define ECHO_PIN 13
+
+//define neopixel 12's pin numbers
+#define NEOPIXEL_PIN 11
+
+//define neopixel 12's led amount
+#define NEOPIXEL_NUM_LED 12
+
+//define push button's pin number
+#define BUTTON_PIN 2
+
+//define led's pin number
+#define LED_PIN 10
+
+//define gas sensor's analog pin number
+#define GAS_ANA_PIN 0
+
+// defines variables
+long duration;
+int distance = 0;
+int trigVal;
+volatile bool buttonPressed;
+int sensorValue;
+
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(NEOPIXEL_NUM_LED, NEOPIXEL_PIN, NEO_GRB);
+
+
+void setup() {
+  pinMode(TRIG_PIN, OUTPUT); // Sets the trigPin as an Output
+  pinMode(ECHO_PIN, INPUT); // Sets the echoPin as an Input
+  pinMode(LED_PIN, OUTPUT);
+  attachInterrupt(digitalPinToInterrupt(BUTTON_PIN), pin_ISR, FALLING);
+  Serial.begin(9600); // Starts the serial communication
+  strip.begin();
+}
+void loop() {
+  if( (distance < 100) &&  (distance > 0)){
+    //if the object locates in less than 100cm, the neopixel led shows in red
+    chase(strip.Color(255,0,0));
+  }
+  else if((distance < 200) && (distance > 100)){
+    //if the object locates in less than 200cm but further than 100cm, the neopixel led shows in green
+    chase(strip.Color(0,255,0));
+  }
+  else if (distance == 0){
+    chase(strip.Color(51,153,204));
+  }
+  else{
+    //if the object locates further than 300cm, the neopixel led shows in yellow
+    chase(strip.Color(0,0,255));
+  }
+  sensorValue = analogRead(GAS_ANA_PIN);       // read analog input pin 0
+  Serial.print("Gas Value is: ");
+  Serial.println(sensorValue, DEC);  // prints the value read
+  if (sensorValue < 500){
+    digitalWrite(LED_PIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  }
+  else if ((sensorValue >= 500) && (sensorValue < 700)){
+    digitalWrite(LED_PIN, LOW);
+    for (uint8_t j = 0; j<3; j++){
+    	digitalWrite(LED_PIN, HIGH);
+    	delay(100);
+    	digitalWrite(LED_PIN, LOW);
+    	delay(100);
+    }
+  }
+  else{
+    digitalWrite(LED_PIN, LOW);
+    for (uint8_t j = 0; j<3; j++){
+    	digitalWrite(LED_PIN, HIGH);
+    	delay(10);
+    	digitalWrite(LED_PIN, LOW);
+    	delay(10);
+    }
+  }
+}
+
+static void chase(uint32_t c) {
+  for(uint8_t i=0; i<strip.numPixels()+4; i++) {
+      strip.setPixelColor(i  , c); // turn on the ith led 
+      strip.setPixelColor(i-4, 0); // Erase pixel a few steps back
+      strip.show();
+      delay(10);
+  }
+}
+
+
+void pin_ISR(){   
+  // Clears the TRIG_PIN
+  trigVal = digitalRead(TRIG_PIN);
+  digitalWrite(TRIG_PIN, trigVal);
+  delayMicroseconds(2);
+  // Sets the TRIG_PIN on HIGH state for 10 micro seconds
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  // Reads the ECHO_PIN, returns the sound wave travel time in microseconds
+  duration = pulseIn(ECHO_PIN, HIGH);
+  // Calculate the distance
+  distance= duration*0.034/2;
+  // Prints the distance on the Serial port
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println("cm");
+  //trigger the actutator(neopixel 12) to show the output
+  if( (distance < 100) &&  (distance > 0)){
+    //if the object locates in less than 100cm, the neopixel led shows in red
+    chase(strip.Color(255,0,0));
+  }
+  else if((distance < 200) && (distance > 100)){
+    //if the object locates in less than 200cm but further than 100cm, the neopixel led shows in green
+    chase(strip.Color(0,255,0));
+  }
+  else if (distance == 0){
+    chase(strip.Color(51,153,204));
+  }
+  else{
+    //if the object locates further than 300cm, the neopixel led shows in yellow
+    chase(strip.Color(0,0,255));
+  }
+}
+  
+
